@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>公众号取关</title>
+<style>
+  :root{
+    --ink:#22262B; --mute:#7A8089; --faint:#A9AEB5; --line:#E3E5E8; --paper:#F4F5F6; --card:#FFFFFF;
+    --red:#B8312F; --red-soft:#FBEDEC; --red-line:#E9B9B7; --ok:#2F7A4E; --ok-soft:#EAF4EE;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:14px/1.5 "PingFang SC",-apple-system,"Helvetica Neue",sans-serif;color:var(--ink);background:var(--paper);
+       -webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit;cursor:pointer}
+  button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .app{display:grid;grid-template-columns:1fr 320px;grid-template-rows:auto 1fr;height:100vh}
+
+  header{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:14px 22px;background:var(--card);border-bottom:1px solid var(--line)}
+  header h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.02em}
+  header .meta{color:var(--mute);font-size:13px;flex:1}
+  .btn{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:6px 12px}
+  .btn:hover{border-color:#C9CDD2}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+  .btn.primary:hover{background:#A22A28}
+  .btn.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  main{display:flex;flex-direction:column;min-height:0;min-width:0}
+  .filters{background:var(--card);border-bottom:1px solid var(--line);padding:14px 22px 10px}
+  .search{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font:inherit;background:var(--paper)}
+  .search:focus{background:var(--card)}
+  .groups{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:12px}
+  .group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .group > span{color:var(--mute);font-size:12px;margin-right:2px}
+  .chip{border:1px solid var(--line);border-radius:999px;padding:3px 11px;background:var(--card);font-size:13px;white-space:nowrap}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .chip input{width:46px;border:0;border-bottom:1px solid currentColor;background:transparent;color:inherit;font:inherit;text-align:center;padding:0;margin:0 3px}
+  .chip input:focus{outline:none}
+
+  .listbar{display:flex;align-items:center;gap:10px;padding:9px 22px;color:var(--mute);font-size:13px;border-bottom:1px solid var(--line)}
+  .listbar b{color:var(--ink);font-weight:600}
+  .listbar .sp{flex:1}
+  .link{border:0;background:none;padding:2px 4px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--faint)}
+  .listbar select{font:inherit;border:1px solid var(--line);border-radius:6px;background:var(--card);padding:2px 6px;color:var(--ink)}
+
+  .list{flex:1;overflow:auto;background:var(--card)}
+  .row{display:grid;grid-template-columns:20px minmax(0,1fr) auto 104px;gap:14px;align-items:center;padding:10px 22px;border-bottom:1px solid #EEF0F2;cursor:pointer;user-select:none}
+  .row:hover{background:#FAFAFB}
+  .box{width:16px;height:16px;border:1.5px solid #B9BDC3;border-radius:4px;display:grid;place-items:center}
+  .row.sel .box{background:var(--red);border-color:var(--red)}
+  .row.sel .box::after{content:"";width:8px;height:4px;border:2px solid #fff;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+  .nm{font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* 勾上 = 用红笔划掉 */
+  .row .nm span{background-image:linear-gradient(var(--red),var(--red));background-repeat:no-repeat;background-position:0 58%;background-size:0 2px;transition:background-size .22s ease-out}
+  .row.sel .nm span{background-size:100% 2px;color:#6B6F75}
+  .sub{color:var(--mute);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tags{display:flex;gap:4px}
+  .tag{font-size:11px;line-height:18px;padding:0 6px;border-radius:4px;border:1px solid var(--line);color:var(--mute);white-space:nowrap}
+  .tag.dead{color:var(--red);border-color:var(--red-line)}
+  .date{text-align:right;color:var(--mute);font-variant-numeric:tabular-nums;font-size:13px}
+  .date.old{color:var(--red)}
+  .empty{padding:70px 30px;text-align:center;color:var(--mute)}
+  .empty h2{color:var(--ink);font-size:17px;margin:0 0 8px;font-weight:600}
+  .empty p{margin:0 auto 18px;max-width:420px}
+
+  aside{background:var(--card);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .cart-h{display:flex;align-items:baseline;gap:8px;padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+  .cart-h h2{margin:0;font-size:15px;font-weight:600}
+  .cart-h .n{font-size:22px;font-weight:600;color:var(--red);font-variant-numeric:tabular-nums}
+  .cart-h .sp{flex:1}
+  .cart{flex:1;overflow:auto}
+  .it{display:flex;align-items:center;gap:8px;padding:7px 18px;border-bottom:1px dashed var(--line)}
+  .it .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .it .x{border:0;background:none;color:var(--faint);font-size:16px;line-height:1;padding:2px 4px}
+  .it .x:hover{color:var(--red)}
+  .it .why{display:block;color:var(--mute);font-size:12px}
+  .it .why a{color:var(--mute)}
+  .it.gone .t{color:var(--mute);text-decoration:line-through;text-decoration-color:var(--red)}
+  .it .st{font-size:12px;color:var(--faint);white-space:nowrap}
+  .it .st.ok{color:var(--ok)}
+  .it .st.bad{color:var(--red)}
+  .cart-f{padding:14px 18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+  .cart-f .btn{width:100%;padding:10px}
+  .hint{color:var(--mute);font-size:12px;margin:0}
+  .cart-empty{padding:40px 22px;color:var(--mute);font-size:13px}
+
+  .prog{padding:16px 18px;border-bottom:1px solid var(--line)}
+  .prog .ph{font-weight:600;margin-bottom:2px}
+  .prog .cur{color:var(--mute);font-size:13px;min-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bar{height:6px;background:var(--paper);border-radius:3px;margin:10px 0 6px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--red);transition:width .4s}
+  .prog .nums{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+  .sec{padding:10px 18px 6px;font-size:12px;color:var(--mute);background:var(--paper);border-bottom:1px solid var(--line)}
+
+  .banner{grid-column:1/-1;margin:0;padding:9px 22px;background:var(--red-soft);color:var(--red);font-size:13px;border-bottom:1px solid var(--red-line)}
+  .banner.info{background:#EEF1F4;color:var(--ink);border-color:var(--line)}
+
+  dialog{border:0;border-radius:12px;padding:24px 26px;max-width:440px;box-shadow:0 18px 60px rgba(20,24,28,.25)}
+  dialog::backdrop{background:rgba(34,38,43,.35)}
+  dialog h3{margin:0 0 10px;font-size:17px}
+  dialog ol{padding-left:18px;margin:0 0 18px;color:#40454B}
+  dialog li{margin:5px 0}
+  dialog .acts{display:flex;justify-content:flex-end;gap:10px}
+  @media (max-width:900px){.app{grid-template-columns:1fr}aside{border-left:0;border-top:1px solid var(--line);max-height:45vh}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>公众号取关</h1>
+    <div class="meta" id="meta"></div>
+    <button class="btn" id="harvestBtn">重新采集名单</button>
+  </header>
+  <div id="bannerSlot" style="display:contents"></div>
+
+  <main>
+    <div class="filters">
+      <input class="search" id="q" type="search" placeholder="搜公众号名字或最新文章标题" autocomplete="off">
+      <div class="groups">
+        <div class="group" data-g="upd"><span>最近更新</span>
+          <button class="chip on" data-v="all">不限</button>
+          <button class="chip" data-v="90">3个月没更新</button>
+          <button class="chip" data-v="180">半年没更新</button>
+          <button class="chip" data-v="365">1年没更新</button>
+          <button class="chip" data-v="none">暂无更新</button>
+        </div>
+        <div class="group" data-g="dead"><span>状态</span>
+          <button class="chip on" data-v="all">不限</button>
+          <button class="chip" data-v="dead">暂不可用</button>
+        </div>
+        <div class="group" data-g="fol"><span>关注先后</span>
+          <button class="chip on" data-v="all">不限</button>
+          <button class="chip" data-v="old">最早关注的<input id="oldN" type="number" min="1" value="100">个</button>
+        </div>
+        <div class="group" data-g="star"><span>星标</span>
+          <button class="chip on" data-v="all">不限</button>
+          <button class="chip" data-v="no">排除星标</button>
+          <button class="chip" data-v="only">只看星标</button>
+        </div>
+      </div>
+    </div>
+    <div class="listbar">
+      <span>筛出<b id="shown">0</b>个</span>
+      <button class="link" id="selAll">全部勾上</button>
+      <button class="link" id="selNone">全部取消</button>
+      <span class="sp"></span>
+      <label>排序 <select id="sort">
+        <option value="upd">按最近更新</option>
+        <option value="updAsc">最久没更新的在前</option>
+        <option value="fol">按关注先后（最新在前）</option>
+        <option value="folAsc">最早关注的在前</option>
+      </select></label>
+    </div>
+    <div class="list" id="list"></div>
+  </main>
+
+  <aside id="side"></aside>
+</div>
+
+<dialog id="confirmDlg">
+  <h3>开始取关 <span id="dlgN"></span> 个公众号</h3>
+  <ol>
+    <li>微信「关注」窗口要开着，别最小化。</li>
+    <li>开始后鼠标由工具操作，大约要 <b id="dlgMin"></b> 分钟，这段时间别动电脑。</li>
+    <li>想停就动一下鼠标（或按住Esc），回来在这里点「继续」。</li>
+    <li>跑完会自动重新扫一遍关注列表，没取关掉的再补一轮。</li>
+  </ol>
+  <div class="acts">
+    <button class="btn" id="dlgCancel">再看看</button>
+    <button class="btn primary" id="dlgGo">开始取关</button>
+  </div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+let S = {accounts: [], run: null, job: {}};
+let picked = new Set(JSON.parse(localStorage.getItem("picked") || "[]"));
+const F = {q: "", upd: "all", dead: "all", fol: "all", star: "all", oldN: 100, sort: "upd"};
+const savePicked = () => localStorage.setItem("picked", JSON.stringify([...picked]));
+
+function daysAgo(d){ return d ? (Date.now() - new Date(d + "T00:00:00").getTime()) / 864e5 : null; }
+
+function filtered(){
+  const q = F.q.trim().toLowerCase();
+  const ranks = S.accounts.map(a => a.followRank).filter(r => r != null);
+  const maxRank = ranks.length ? Math.max(...ranks) : 0;
+  let out = S.accounts.filter(a => {
+    if (q && !(a.name.toLowerCase().includes(q) || (a.sub || "").toLowerCase().includes(q))) return false;
+    if (F.upd === "none" && !a.noUpdate) return false;
+    if (/^\d+$/.test(F.upd)) { const g = daysAgo(a.date); if (g == null || g < +F.upd) return false; }
+    if (F.dead === "dead" && !a.dead) return false;
+    if (F.fol === "old" && (a.followRank == null || a.followRank < maxRank + 1 - F.oldN)) return false;
+    if (F.star === "no" && a.star) return false;
+    if (F.star === "only" && !a.star) return false;
+    return true;
+  });
+  const dk = a => a.date || (a.noUpdate || a.dead ? "0000" : "0001");
+  const rk = a => a.followRank ?? 1e9;
+  const sorters = {
+    upd: (a,b) => dk(b).localeCompare(dk(a)),
+    updAsc: (a,b) => dk(a).localeCompare(dk(b)),
+    fol: (a,b) => rk(a) - rk(b),
+    folAsc: (a,b) => rk(b) - rk(a),
+  };
+  return out.sort(sorters[F.sort]);
+}
+
+const busy = () => S.job.running;
+
+function renderList(){
+  const list = $("#list");
+  if (!S.accounts.length) {
+    const harvesting = busy() && S.job.kind === "harvest";
+    list.innerHTML = harvesting
+      ? `<div class="empty"><h2>正在采集名单</h2><p>工具在微信「关注」窗口里从上往下翻（${esc(S.job.last?.tab || "")}），已收 ${S.job.last?.count ?? 0} 个。先翻「最近关注」记下关注先后，再翻「最近更新」记下日期。动一下鼠标就会停下。</p></div>`
+      : `<div class="empty"><h2>还没有名单</h2><p>先在微信里打开「关注」窗口（能看到「最近更新 / 最近关注」那一页），再点下面的按钮。工具会把所有关注的公众号翻一遍记下来，几百个号大约 5 分钟。</p><button class="btn primary" onclick="harvest()">采集名单</button></div>`;
+    $("#shown").textContent = 0;
+    return;
+  }
+  const rows = filtered();
+  $("#shown").textContent = rows.length;
+  list.innerHTML = rows.map(a => {
+    const g = daysAgo(a.date);
+    const tags = [a.star ? `<span class="tag">星标</span>` : "", a.dead ? `<span class="tag dead">不可用</span>` : ""].join("");
+    const date = a.date ? a.date : (a.noUpdate ? "暂无更新" : "—");
+    return `<div class="row${picked.has(a.name) ? " sel" : ""}" data-n="${esc(a.name)}" role="checkbox" aria-checked="${picked.has(a.name)}" tabindex="0">
+      <span class="box"></span>
+      <div style="min-width:0"><div class="nm"><span>${esc(a.name)}</span></div><div class="sub">${esc(a.sub || "")}</div></div>
+      <div class="tags">${tags}</div>
+      <span class="date${g != null && g > 365 ? " old" : ""}">${esc(date)}</span>
+    </div>`;
+  }).join("") || `<div class="empty"><h2>没有符合的号</h2><p>放宽一下上面的筛选条件。</p></div>`;
+}
+
+function itemRow(name, right, cls = "", why = ""){
+  return `<div class="it ${cls}"><span class="t">${esc(name)}${why}</span>${right}</div>`;
+}
+
+function renderSide(){
+  const side = $("#side");
+  const run = S.run;
+  const job = S.job;
+  const phase = run?.phase;
+
+  // 有进行中 / 暂停 / 跑完的取关任务，右栏显示进度和结果
+  if (run && phase) {
+    const ts = run.targets || [];
+    const gone = ts.filter(t => t.status === "gone");
+    const still = ts.filter(t => t.status === "still" || t.status === "failed");
+    const clicked = ts.filter(t => t.status === "clicked");
+    const pending = ts.filter(t => t.status === "pending");
+    const running = busy() && job.kind === "run";
+    let title, cur = "";
+    if (phase === "done") title = still.length ? `完成，还有 ${still.length} 个没取关掉` : `全部取关完成`;
+    else if (running && job.last?.phase === "verify") { title = `第 ${run.round} 轮 · 对账中`; cur = "重新扫一遍关注列表，看勾过的号还在不在"; }
+    else if (running) { title = `第 ${run.round} 轮 · 正在取关`; cur = job.last?.current ? `当前：${job.last.current}` : "正在找微信窗口…"; }
+    else if (job.last?.type === "error") { title = "停下了"; cur = job.last.msg; }
+    else { title = "已暂停"; cur = (run.note ? run.note + "。" : "") + "点「继续」接着跑，已经取关的不会重复操作"; }
+
+    const doneN = gone.length + clicked.length;
+    const pct = ts.length ? Math.round(doneN / ts.length * 100) : 0;
+    let body = `<div class="prog"><div class="ph">${esc(title)}</div><div class="cur">${esc(cur)}</div>
+      <div class="bar"><i style="width:${phase === "done" ? Math.round(gone.length / ts.length * 100) : pct}%"></i></div>
+      <div class="nums">${phase === "done" ? `确认已取关 ${gone.length} / ${ts.length}` : `已点 ${doneN} · 待处理 ${pending.length + still.length} · 共 ${ts.length}`}</div></div>`;
+
+    body += `<div class="cart">`;
+    if (still.length) {
+      body += `<div class="sec">${phase === "done" ? "还在列表里" : "这一轮没成功，稍后再试"} ${still.length}</div>`;
+      body += still.map(t => itemRow(t.name, `<span class="st bad">未取关</span>`, "",
+        `<span class="why">${esc(t.reason || "")}${t.shot ? ` · <a href="/shots/${encodeURIComponent(t.shot)}" target="_blank">看截图</a>` : ""}</span>`)).join("");
+    }
+    if (phase !== "done" && (pending.length || clicked.length)) {
+      body += `<div class="sec">进行中 ${pending.length + clicked.length}</div>`;
+      body += clicked.map(t => itemRow(t.name, `<span class="st">已点，待对账</span>`)).join("");
+      body += pending.map(t => itemRow(t.name, `<span class="st">排队</span>`)).join("");
+    }
+    if (gone.length) {
+      body += `<div class="sec">确认已取关 ${gone.length}</div>`;
+      body += gone.map(t => itemRow(t.name, `<span class="st ok">已取关</span>`, "gone")).join("");
+    }
+    body += `</div><div class="cart-f">`;
+    if (running) {
+      body += `<button class="btn dark" onclick="pause()">暂停</button><p class="hint">动一下鼠标或按住Esc也会立刻停。</p>`;
+    } else if (phase === "done") {
+      if (still.length) body += `<button class="btn primary" onclick="retry()">再试一次没取关掉的 ${still.length} 个</button>`;
+      body += `<button class="btn" onclick="clearRun()">完成，回到勾选</button>`;
+    } else {
+      body += `<button class="btn primary" onclick="resume()">继续</button><button class="btn" onclick="clearRun()">放弃这次，回到勾选</button>`;
+    }
+    body += `</div>`;
+    side.innerHTML = body;
+    return;
+  }
+
+  // 平时：取关清单
+  const names = [...picked];
+  side.innerHTML = `<div class="cart-h"><h2>取关清单</h2><span class="n">${names.length}</span><span class="sp"></span>
+      ${names.length ? `<button class="link" onclick="clearPicked()">清空</button>` : ""}</div>
+    <div class="cart">${names.length ? names.map(n => itemRow(n, `<button class="x" title="移出清单" data-x="${esc(n)}">×</button>`)).join("")
+      : `<div class="cart-empty">在左边勾上要取关的号，会出现在这里。开始前可以在这儿从头到尾核对一遍。</div>`}</div>
+    <div class="cart-f"><button class="btn primary" id="goBtn" ${names.length && !busy() ? "" : "disabled"}>${names.length ? `开始取关 ${names.length} 个` : "开始取关"}</button>
+      <p class="hint">每个号 3–5 秒，跑完自动对账。</p></div>`;
+  $("#goBtn")?.addEventListener("click", openConfirm);
+}
+
+function renderBanner(){
+  const j = S.job, slot = $("#bannerSlot");
+  let html = "";
+  if (j.kind === "harvest" && j.running && S.accounts.length)
+    html = `<p class="banner info">正在采集名单，已收 ${j.last?.count ?? 0} 个（${esc(j.last?.tab || "")}）。动一下鼠标就会停下。</p>`;
+  else if (j.kind === "harvest" && !j.running && (j.last?.type === "error" || j.last?.type === "stopped"))
+    html = `<p class="banner">${esc(j.last.msg)}</p>`;
+  else if (j.kind === "harvest" && !j.running && j.last?.type === "harvested" && j.last.gaps)
+    html = `<p class="banner">采集时有 ${j.last.gaps} 处翻页没对上，名单可能缺几个号。可以再采集一次。</p>`;
+  slot.innerHTML = html;
+}
+
+function renderMeta(){
+  const n = S.accounts.length;
+  $("#meta").textContent = n ? `共关注 ${n} 个，名单采集于 ${S.accountsUpdatedAt || "—"}` : "";
+  $("#harvestBtn").disabled = busy();
+  $("#harvestBtn").style.display = n ? "" : "none";
+}
+
+function render(){ renderMeta(); renderBanner(); renderList(); renderSide(); }
+
+async function api(path, body){
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body || {})});
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) alert(j.error || "出错了");
+  await refresh();
+  return j;
+}
+async function harvest(){
+  const c = await fetch("/api/check", {method: "POST"}).then(r => r.json()).catch(() => ({}));
+  if (!c.ax || !c.screen) { alert("还缺系统权限：请在「系统设置 → 隐私与安全性」里，给「终端」打开「辅助功能」和「录屏与系统录音」，然后退出终端、重新双击打开工具。"); return; }
+  if (!c.window) { alert("没找到微信的「关注」窗口。请在微信里打开「关注」，停在「最近更新 / 最近关注」那一页，别最小化。"); return; }
+  api("/api/harvest");
+}
+const pause = () => api("/api/pause");
+const resume = () => api("/api/resume");
+const retry = () => api("/api/retry");
+function clearRun(){
+  // 已经确认取关掉的号从勾选里拿掉
+  for (const t of S.run?.targets || []) if (t.status === "gone") picked.delete(t.name);
+  savePicked();
+  api("/api/clear-run");
+}
+function clearPicked(){ picked.clear(); savePicked(); render(); }
+
+async function openConfirm(){
+  const c = await fetch("/api/check", {method: "POST"}).then(r => r.json()).catch(() => ({}));
+  if (!c.ax || !c.screen) { alert("还缺系统权限：请在「系统设置 → 隐私与安全性」里，给「终端」打开「辅助功能」和「录屏与系统录音」，然后退出终端、重新双击打开工具。"); return; }
+  if (!c.window) { alert("没找到微信的「关注」窗口。请在微信里打开「关注」，别最小化。"); return; }
+  $("#dlgN").textContent = picked.size;
+  $("#dlgMin").textContent = Math.max(1, Math.ceil(picked.size * 5 / 60) + 3);
+  $("#confirmDlg").showModal();
+}
+$("#dlgCancel").onclick = () => $("#confirmDlg").close();
+$("#dlgGo").onclick = () => { $("#confirmDlg").close(); api("/api/run", {names: [...picked]}); };
+
+// 交互
+$("#q").addEventListener("input", e => { F.q = e.target.value; renderList(); });
+$("#sort").addEventListener("change", e => { F.sort = e.target.value; renderList(); });
+$("#oldN").addEventListener("input", e => { F.oldN = Math.max(1, +e.target.value || 1); renderList(); });
+$("#oldN").addEventListener("click", e => e.stopPropagation());
+document.querySelectorAll(".group").forEach(g => g.addEventListener("click", e => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  g.querySelectorAll(".chip").forEach(c => c.classList.toggle("on", c === b));
+  F[g.dataset.g] = b.dataset.v;
+  renderList();
+}));
+function toggle(name){
+  picked.has(name) ? picked.delete(name) : picked.add(name);
+  savePicked();
+  document.querySelectorAll(".row").forEach(r => { if (r.dataset.n === name) { r.classList.toggle("sel", picked.has(name)); r.setAttribute("aria-checked", picked.has(name)); } });
+  renderSide();
+}
+$("#list").addEventListener("click", e => { const r = e.target.closest(".row"); if (r) toggle(r.dataset.n); });
+$("#list").addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && e.target.classList.contains("row")) { e.preventDefault(); toggle(e.target.dataset.n); } });
+$("#side").addEventListener("click", e => { const x = e.target.closest("[data-x]"); if (x) toggle(x.dataset.x); });
+$("#selAll").onclick = () => { filtered().forEach(a => picked.add(a.name)); savePicked(); render(); };
+$("#selNone").onclick = () => { filtered().forEach(a => picked.delete(a.name)); savePicked(); render(); };
+$("#harvestBtn").onclick = () => { if (confirm("重新采集会把关注列表再翻一遍（约5分钟），动一下鼠标就会停下。开始吗？")) harvest(); };
+
+// 轮询状态。列表只在数据变了时重画，免得打断勾选和滚动。
+let lastSig = "";
+async function refresh(){
+  try {
+    S = await fetch("/api/state").then(r => r.json());
+  } catch { return; }
+  // 名单里已经不存在的号，从勾选里去掉
+  if (S.accounts.length && !S.run) {
+    const have = new Set(S.accounts.map(a => a.name));
+    let changed = false;
+    for (const n of picked) if (!have.has(n)) { picked.delete(n); changed = true; }
+    if (changed) savePicked();
+  }
+  const sig = JSON.stringify([S.accountsUpdatedAt, S.accounts.length, S.job.running, S.job.kind, S.job.last?.count]);
+  if (sig !== lastSig) { lastSig = sig; render(); }
+  else { renderMeta(); renderBanner(); renderSide(); }
+}
+refresh();
+setInterval(refresh, 1500);
+</script>
+</body>
+</html>
